@@ -309,16 +309,17 @@ export default function AIChat() {
         onClick={() => setOpen(o => !o)}
         className="fixed bottom-6 right-6 w-14 h-14 rounded-full flex items-center justify-center z-50 shadow-lg"
         style={{
-          background: open ? '#ff475722' : 'linear-gradient(135deg, #00d4ff22, #a855f722)',
-          border: `2px solid ${open ? '#ff4757' : '#00d4ff'}`,
+          background: open ? '#ff4757' : 'linear-gradient(135deg, #00d4ff, #a855f7)',
+          border: 'none',
         }}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
-        animate={{ boxShadow: open ? '0 0 20px rgba(255,71,87,0.3)' : '0 0 20px rgba(0,212,255,0.3)' }}
+        animate={{ boxShadow: open ? '0 0 25px rgba(255,71,87,0.5)' : '0 0 25px rgba(0,212,255,0.5)' }}
+        title="AI Tutor — ask about this problem"
       >
         {open
-          ? <X size={20} style={{ color: '#ff4757' }} />
-          : <MessageSquare size={20} style={{ color: '#00d4ff' }} />}
+          ? <X size={20} style={{ color: '#fff' }} />
+          : <MessageSquare size={20} style={{ color: '#fff' }} />}
       </motion.button>
 
       {/* Chat panel */}
