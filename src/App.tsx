@@ -5,6 +5,7 @@ import StepController from './components/StepController';
 import ProblemInfo from './components/ProblemInfo';
 import EmptyState from './components/EmptyState';
 import ParticleBackground from './components/ParticleBackground';
+import AIChat from './components/AIChat';
 import VisualizerRouter from './visualizers';
 import { useStore } from './store';
 
@@ -94,6 +95,8 @@ export default function App() {
           )}
         </main>
       </div>
+
+      <AIChat />
     </div>
   );
 }
