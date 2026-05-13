@@ -1,23 +1,86 @@
 import type { ParsedProblem, Step, VisType } from '../store';
 
-// ─── Heuristic detector ───────────────────────────────────────────────────────
+// ─── Heuristic detector (scored, not first-match) ────────────────────────────
+const TYPE_SIGNALS: Record<VisType, { patterns: RegExp[]; weight: number }[]> = {
+  tree: [
+    { patterns: [/binary tree/i, /bst/i, /binary search tree/i], weight: 10 },
+    { patterns: [/tree node/i, /treenode/i, /root node/i], weight: 8 },
+    { patterns: [/\binorder\b/i, /preorder/i, /postorder/i, /level.?order/i], weight: 8 },
+    { patterns: [/\bright child\b/i, /\bleft child\b/i, /parent node/i], weight: 6 },
+    { patterns: [/\broot\b/i, /\bleaf\b/i, /subtree/i], weight: 4 },
+    { patterns: [/\bdepth\b/i, /\bheight\b/i, /\bdiameter\b/i], weight: 3 },
+  ],
+  linkedlist: [
+    { patterns: [/linked list/i, /linkedlist/i], weight: 10 },
+    { patterns: [/\.next\b/i, /next pointer/i, /next node/i], weight: 8 },
+    { patterns: [/\bhead\b.*\bnode\b/i, /\bnode\b.*\bhead\b/i], weight: 6 },
+    { patterns: [/singly linked/i, /doubly linked/i], weight: 10 },
+    { patterns: [/\btail\b/i, /reverse.*list/i], weight: 4 },
+  ],
+  graph: [
+    { patterns: [/\bgraph\b/i, /undirected graph/i, /directed graph/i], weight: 10 },
+    { patterns: [/\bvertices\b/i, /\bedges\b/i, /adjacen/i], weight: 8 },
+    { patterns: [/\bcycle\b/i, /\bconnected component/i, /topological/i], weight: 8 },
+    { patterns: [/\bneighbor[s]?\b/i, /\bpath between\b/i], weight: 5 },
+  ],
+  matrix: [
+    { patterns: [/\bmatrix\b/i, /\bgrid\b/i, /2d array/i], weight: 10 },
+    { patterns: [/\bisland[s]?\b/i, /\bflood fill\b/i], weight: 8 },
+    { patterns: [/m\s*[x×]\s*n\b/i, /\brows?\b.*\bcols?\b/i, /\bcols?\b.*\brows?\b/i], weight: 6 },
+    { patterns: [/\bcell[s]?\b/i, /grid\[/i], weight: 4 },
+  ],
+  dp: [
+    { patterns: [/dynamic programming/i, /\bmemoization\b/i, /\btabulation\b/i], weight: 10 },
+    { patterns: [/\bsubproblem[s]?\b/i, /\boptimal substructure\b/i], weight: 8 },
+    { patterns: [/\bknapsack\b/i, /\bcoin change\b/i, /\blongest common\b/i], weight: 8 },
+    { patterns: [/\bmin cost\b/i, /\bmax profit\b/i, /\bnumber of ways\b/i], weight: 4 },
+  ],
+  stack: [
+    { patterns: [/\bstack\b/i, /\bparenthes/i, /valid.*bracket/i, /bracket.*valid/i], weight: 10 },
+    { patterns: [/\bpush\b.*\bpop\b/i, /\bpop\b.*\bpush\b/i], weight: 8 },
+    { patterns: [/\bmonotonic stack\b/i, /\bbalanced.*\bparenthes/i], weight: 8 },
+    { patterns: [/\b\(\)|\[\]|\{\}/], weight: 5 },
+  ],
+  twopointer: [
+    { patterns: [/two.?pointer[s]?/i, /sliding window/i], weight: 10 },
+    { patterns: [/\bsorted array\b/i, /\bbinary search\b/i], weight: 8 },
+    { patterns: [/left.*right pointer/i, /\bleft\b.*\bright\b.*pointer/i], weight: 7 },
+    { patterns: [/\bsearch\b.*\bsorted\b/i, /\bsorted\b.*\bsearch\b/i], weight: 6 },
+    { patterns: [/log\s*n/i, /\bbisect\b/i], weight: 5 },
+  ],
+  hashmap: [
+    { patterns: [/hash.?map/i, /hash.?table/i, /hash.?set/i], weight: 10 },
+    { patterns: [/\bfrequency\b/i, /\bcount.*occurrence/i, /occurrence.*count/i], weight: 7 },
+    { patterns: [/\bdictionary\b/i, /\blookup\b/i, /\bcache\b/i], weight: 5 },
+  ],
+  array: [],
+};
+
 function detectType(text: string): VisType {
-  const t = text.toLowerCase();
-  if (/binary tree|bst|tree|root|node|leaf|depth|height|traversal|level order/.test(t)) return 'tree';
-  if (/linked list|next pointer|head node/.test(t)) return 'linkedlist';
-  if (/graph|vertex|vertices|edge|neighbor|dfs|bfs|path|cycle|connected/.test(t)) return 'graph';
-  if (/matrix|grid|2d array|row|col|island|cell/.test(t)) return 'matrix';
-  if (/dynamic programming|dp|memoization|tabulation|subproblem|knapsack/.test(t)) return 'dp';
-  if (/stack|parenthes|bracket|push|pop/.test(t)) return 'stack';
-  if (/two pointer|left.*right|sliding window/.test(t)) return 'twopointer';
-  if (/hash|map|dict|frequenc|count/.test(t)) return 'hashmap';
-  return 'array';
+  const scores: Partial<Record<VisType, number>> = {};
+  const types: VisType[] = ['tree','linkedlist','graph','matrix','dp','stack','twopointer','hashmap'];
+
+  for (const type of types) {
+    let score = 0;
+    for (const group of TYPE_SIGNALS[type]) {
+      for (const pat of group.patterns) {
+        if (pat.test(text)) {
+          score += group.weight;
+          break; // only count each group once
+        }
+      }
+    }
+    if (score > 0) scores[type] = score;
+  }
+
+  if (Object.keys(scores).length === 0) return 'array';
+  return (Object.entries(scores).sort((a, b) => b[1] - a[1])[0][0]) as VisType;
 }
 
 function detectDifficulty(text: string): 'Easy' | 'Medium' | 'Hard' {
   const t = text.toLowerCase();
-  if (/hard|difficult|complex|optimal/.test(t)) return 'Hard';
-  if (/medium|moderate/.test(t)) return 'Medium';
+  if (/\bhard\b/.test(t)) return 'Hard';
+  if (/\bmedium\b/.test(t)) return 'Medium';
   return 'Easy';
 }
 
@@ -177,8 +240,18 @@ const builtinProblems: Record<string, () => ParsedProblem> = {
 // ─── Fuzzy match ──────────────────────────────────────────────────────────────
 function fuzzyMatch(input: string): string | null {
   const t = input.toLowerCase().trim();
+  // 1. Exact key match
   for (const key of Object.keys(builtinProblems)) {
-    if (t.includes(key) || key.includes(t)) return key;
+    if (t === key) return key;
+  }
+  // 2. Input contains the full key phrase
+  for (const key of Object.keys(builtinProblems)) {
+    if (t.includes(key)) return key;
+  }
+  // 3. All meaningful words of key appear somewhere in input
+  for (const key of Object.keys(builtinProblems)) {
+    const words = key.split(' ').filter(w => w.length > 3);
+    if (words.length > 1 && words.every(w => t.includes(w))) return key;
   }
   return null;
 }
